@@ -3,6 +3,7 @@ const fetch = require("node-fetch");
 const TOKEN = process.env.CANVAS_TOKEN || "";
 const API = "https://liverpool.instructure.com/api/v1";
 const WEBHOOK = process.env.WEBHOOK || "";
+const COURSE_FILTER = '202021-COMP';
 
 let bucket = { remaining: undefined };
 
@@ -38,7 +39,6 @@ async function getCourseAssignments(courseID) {
 
 async function getCourseDiscussions(courseID) {
   const discussions = await req.get(`${API}/courses/${courseID}/discussion_topics`, TOKEN);
-  console.log(discussions);
   return discussions.filter(d => d.lock_at !== null).map(d => {
     let due = Date.parse(d.lock_at);
     dueDate = new Date();
@@ -81,20 +81,15 @@ function getWeekTimes() {
 
 async function main() {
   let courses = await getCourses();
-  let importantCourses = courses.filter(course => course.name.startsWith('202021-COMP'));
+  let importantCourses = courses.filter(course => course.name.startsWith(COURSE_FILTER));
   let courseNames = {};
   for (let course of importantCourses) {
     let start = course.name.indexOf('-')+1;
     courseNames[course.id] = course.name.substring(start, course.name.indexOf(' '));
   }
   console.log(courseNames);
-  let contexts = importantCourses.map(course => `course_${course.id}`);
-  console.log(`Identified ${contexts.length} courses`);
-  console.log(contexts);
+  console.log(`Identified ${importantCourses.length} courses`);
   let { start, end } = getWeekTimes();
-  // console.log(await getCalenderEvents(contexts, startDate, endDate));
-  // console.log(await calenderEvents(contexts, startDate, endDate, 'assignments'));
-  // console.log(await plannerEvents(contexts, startDate, endDate));
 
   const length = importantCourses.length
   let promises = new Array(length*2);
