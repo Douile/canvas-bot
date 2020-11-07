@@ -33,7 +33,7 @@ async function getCourseAssignments(courseID) {
     let due = Date.parse(a.due_at);
     let dueDate = new Date();
     dueDate.setTime(due);
-    return {id: a.id, name: a.name, course: a.course_id, desc: a.description, due, dueDate , points: a.points_possible};
+    return {id: a.id, name: a.name, course: a.course_id, desc: a.description, due, dueDate , points: a.points_possible, url: a.html_url };
   });
 }
 
@@ -43,7 +43,7 @@ async function getCourseDiscussions(courseID) {
     let due = Date.parse(d.lock_at);
     dueDate = new Date();
     dueDate.setTime(due);
-    return {id: d.id, name: d.title, course: courseID, desc: d.message, due, dueDate, points: 0};
+    return {id: d.id, name: d.title, course: courseID, desc: d.message, due, dueDate, points: 0, url: d.html_url };
   })
 }
 
@@ -103,7 +103,7 @@ async function main() {
   for (let ass of assignments) {
     console.log(`[${ass.id}] ${ass.due} ${ass.dueDate.toUTCString()} ${courseNames[ass.course]} ${ass.name} - ${ass.points}`);
   }
-  const fields = assignments.map(a => {return {name: courseNames[a.course], value: `${a.name}\nDue: ${a.dueDate.toUTCString()}\nPoints: ${a.points}`, inline: false}});
+  const fields = assignments.map(a => {return {name: courseNames[a.course], value: `[${a.name}](${a.url})\nDue: ${a.dueDate.toUTCString()}\nPoints: ${a.points}`, inline: false}});
   let res = await fetch(WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({embeds:[{
     title: 'Upcoming assignments',
     color: 0xff0000,
