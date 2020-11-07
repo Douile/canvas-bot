@@ -4,6 +4,13 @@ const TOKEN = process.env.CANVAS_TOKEN || "";
 const API = "https://liverpool.instructure.com/api/v1";
 const WEBHOOK = process.env.WEBHOOK || "";
 const COURSE_FILTER = '202021-COMP';
+const PAGE_LENGTH = 50;
+
+const MS_DAY = 1000 * 60 * 60 * 24;
+const MS_WEEK = MS_DAY*7;
+
+const RE_LINKURL = /\<([^\>]+)\>/g;
+const RE_LINKREL = /rel=\"([^"]+)\"/g;
 
 let bucket = { remaining: undefined };
 
@@ -14,13 +21,54 @@ const req = Object.freeze({
     console.log('GET', String(url));
     const res = await fetch(url, {headers});
     bucket.remaining = parseFloat(res.headers.get('X-Rate-Limit-Remaining'));
+    return res;
+  },
+  'getJson': async function(url, auth, headers) {
+    const res = await req.get(url, auth, headers);
     if (res.ok) return await res.json();
     throw new Error(`Fetch error ${res.status} ${res.statusText}`);
+  },
+  'getPaginated': async function(url, auth, headers) {
+    if (!(url instanceof URL)) {
+      url = new URL(url);
+    }
+    url.searchParams.set('page', '1');
+    url.searchParams.set('per_page', PAGE_LENGTH);
+    let responses = [];
+    while (true) {
+      const res = await req.get(url, auth, headers);
+      if (!res.ok) throw new Error(`Fetch error ${res.status} ${res.statusText}`);
+      responses.push(await res.json());
+      let links = parseLinks(res.headers.get('Link'));
+
+      if ('next' in links) {
+        url = links.next;
+      } else {
+        break;
+      }
+      if (links.current === links.last) break;
+    }
+    return responses.flat();
   }
 });
 
+function parseLinks(linkString) {
+  let links = {}, linkStrings = linkString.split(',');
+  for (link of linkStrings) {
+    let [ url, rel ] = link.split(';');
+    RE_LINKURL.lastIndex = 0;
+    let urlMatch = RE_LINKURL.exec(url);
+    if (urlMatch === null) continue;
+    RE_LINKREL.lastIndex = 0;
+    let relMatch = RE_LINKREL.exec(rel);
+    if (relMatch === null) continue;
+    links[relMatch[1]] = urlMatch[1];
+  }
+  return links;
+}
+
 async function getCourses() {
-  return req.get(`${API}/courses`, TOKEN);
+  return req.getJson(`${API}/courses`, TOKEN);
 }
 
 async function getCourseTodo(courseID) {
@@ -28,7 +76,7 @@ async function getCourseTodo(courseID) {
 }
 
 async function getCourseAssignments(courseID) {
-  const assignments = await req.get(`${API}/courses/${courseID}/assignments`, TOKEN);
+  const assignments = await req.getPaginated(`${API}/courses/${courseID}/assignments`, TOKEN);
   return assignments.map(a => {
     let due = Date.parse(a.due_at);
     let dueDate = new Date();
@@ -38,7 +86,7 @@ async function getCourseAssignments(courseID) {
 }
 
 async function getCourseDiscussions(courseID) {
-  const discussions = await req.get(`${API}/courses/${courseID}/discussion_topics`, TOKEN);
+  const discussions = await req.getPaginated(`${API}/courses/${courseID}/discussion_topics`, TOKEN);
   return discussions.filter(d => d.lock_at !== null).map(d => {
     let due = Date.parse(d.lock_at);
     dueDate = new Date();
@@ -74,8 +122,8 @@ function getWeekTimes() {
   start.setUTCSeconds(0);
   start.setUTCMinutes(0);
   start.setUTCHours(0);
-  start = start.getTime() - ((start.getDay()-1) * 1000 * 60 * 60 * 24);
-  end = start + (1000 * 60 * 60 * 24 * 7);
+  start = start.getTime() - ((start.getDay()-1) * MS_DAY);
+  end = start + (MS_WEEK);
   return { start, end };
 }
 
