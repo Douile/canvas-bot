@@ -104,7 +104,7 @@ async function main() {
     console.log(`[${ass.id}] ${ass.due} ${ass.dueDate.toUTCString()} ${courseNames[ass.course]} ${ass.name} - ${ass.points}`);
   }
   const fields = assignments.map(a => {return {name: courseNames[a.course], value: `[${a.name}](${a.url})\nDue: ${a.dueDate.toUTCString()}\nPoints: ${a.points}`, inline: false}});
-  let res = await fetch(WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({embeds:[{
+  let res = await fetch(WEBHOOK, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content:'@everyone',embeds:[{
     title: 'Upcoming assignments',
     color: 0xff0000,
     fields: fields,
