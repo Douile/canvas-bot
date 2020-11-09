@@ -37,7 +37,7 @@ client.on('message', asyncWrap(async function(message) {
     case 'nextweek':
     offset = 1;
     case 'thisweek':
-    const embed = await generateAssignmentsEmbed();
+    const embed = await generateAssignmentsEmbed(offset);
     await message.channel.send({ embed });
     break;
   }
