@@ -1,9 +1,5 @@
 const fetch = require("node-fetch");
 
-const TOKEN = process.env.CANVAS_TOKEN || "";
-const API = "https://liverpool.instructure.com/api/v1";
-const WEBHOOK = process.env.WEBHOOK || "";
-const COURSE_FILTER = '202021-COMP';
 const PAGE_LENGTH = 50;
 
 const RE_LINKURL = /\<([^\>]+)\>/g;
@@ -65,20 +61,46 @@ function parseLinks(linkString) {
 }
 
 class Canvas {
-  constructor(token) {
-    if (typeof token !== 'string' || string.length === 0) throw new Error('Invalid API token');
+  constructor(token, options) {
+    if (typeof token !== 'string' || token.length === 0) throw new Error('Invalid API token');
     this.token = token;
-  }
-  async function getCourses() {
-    return req.getJson(`${API}/courses`, this.token);
+    this.options = options || {};
   }
 
-  async function getCourseTodo(courseID) {
-    return req.get(`${API}/courses/${courseID}/todo`, this.token);
+  get api() {
+    return this.options.api;
   }
 
-  async function getCourseAssignments(courseID) {
-    const assignments = await req.getPaginated(`${API}/courses/${courseID}/assignments`, this.token);
+  get courseFilter() {
+    return new RegExp(this.options.course_filter, 'g');
+  }
+
+  async getCourses() {
+    return req.getPaginated(`${this.api}/courses`, this.token);
+  }
+
+  async getFilteredCourses() {
+    const courses = await this.getCourses();
+    const filter = this.courseFilter;
+    let res = [];
+    for (let course of courses) {
+      const match = course.name.match(this.courseFilter);
+      if (match !== null) {
+        res.push({
+          id: course.id,
+          name: match[1]
+        });
+      }
+    }
+    return res;
+  }
+
+  async getCourseTodo(courseID) {
+    return req.get(`${this.api}/courses/${courseID}/todo`, this.token);
+  }
+
+  async getCourseAssignments(courseID) {
+    const assignments = await req.getPaginated(`${this.api}/courses/${courseID}/assignments`, this.token);
     return assignments.map(a => {
       let due = Date.parse(a.due_at);
       let dueDate = new Date();
@@ -87,8 +109,8 @@ class Canvas {
     });
   }
 
-  async function getCourseDiscussions(courseID) {
-    const discussions = await req.getPaginated(`${API}/courses/${courseID}/discussion_topics`, this.token);
+  async getCourseDiscussions(courseID) {
+    const discussions = await req.getPaginated(`${this.api}/courses/${courseID}/discussion_topics`, this.token);
     return discussions.filter(d => d.lock_at !== null).map(d => {
       let due = Date.parse(d.lock_at);
       dueDate = new Date();
@@ -97,8 +119,8 @@ class Canvas {
     })
   }
 
-  async function getCalenderEvents(contexts, startDate, endDate) {
-    let url = new URL(`${API}/calendar_events`);
+  async getCalenderEvents(contexts, startDate, endDate) {
+    let url = new URL(`${this.api}/calendar_events`);
     url.searchParams.append('context_codes[]', contexts.join(','));
     url.searchParams.append('type', 'event');
     url.searchParams.append('start_date', startDate);
@@ -108,8 +130,8 @@ class Canvas {
     return await req.get(url, this.token);
   }
 
-  async function plannerEvents(contexts, startDate, endDate, filter) {
-    let url = new URL(`${API}/planner/items`);
+  async plannerEvents(contexts, startDate, endDate, filter) {
+    let url = new URL(`${this.api}/planner/items`);
     url.searchParams.append('context_codes[]', contexts.join(','));
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
