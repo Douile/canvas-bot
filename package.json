@@ -1,6 +1,6 @@
 {
-  "name": "canvas-webhook",
-  "version": "1.0.0",
+  "name": "canvas-bot",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,14 @@
   "author": "Tom",
   "license": "MIT",
   "dependencies": {
-    "node-fetch": "^2.6.1"
+    "discord.js-light": "^3.3.5",
+    "node-fetch": "^2.6.1",
+    "sqlite3": "^5.0.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.2",
+    "erlpack": "github:discord/erlpack",
+    "utf-8-validate": "^5.0.3",
+    "zlib-sync": "^0.1.7"
   }
 }
