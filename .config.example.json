@@ -1,5 +1,13 @@
 {
   "api": "https://liverpool.instructure.com/api/v1",
   "course_filter": "^202021-(COMP[0-9]+)",
-  "prefix": "ca!"
+  "prefix": "ca!",
+  "overrides": [
+    {
+      "offset": 489600000,
+      "course": "COMP101 & COMP105",
+      "name": "Weekly homework",
+      "points": 1
+    }
+  ]
 }

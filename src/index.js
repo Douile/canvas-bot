@@ -76,8 +76,26 @@ async function getCoursesAndAssignmentsCached() {
 
 async function getWeeksAssignments(offset) {
   const weekTimes = getWeekTimes(offset);
-  const { courses, assignments } = await getCoursesAndAssignmentsCached();
-  return { courses, assignments: assignments.filter(a => a.due >= weekTimes.start && a.due <= weekTimes.end ).sort((a,b) => a.due - b.due), weekTimes };
+  let { courses, assignments } = await getCoursesAndAssignmentsCached();
+  return { courses, assignments: assignments.concat(parseAssignmentOverrides(weekTimes.start, courses)).filter(a => a.due >= weekTimes.start && a.due <= weekTimes.end ).sort((a,b) => a.due - b.due), weekTimes };
+}
+
+function parseAssignmentOverrides(startTime, courses) {
+  return client.config.overrides.map(o => {
+    courses[o.course] = o.course;
+    const due = startTime + o.offset;
+    let dueDate = new Date();
+    dueDate.setTime(due);
+    return {
+      id: `override-${o.name}`,
+      name: o.name,
+      course: o.course,
+      desc: '',
+      due, dueDate,
+      points: o.points,
+      url: ''
+    };
+  });
 }
 
 async function generateAssignmentsEmbed(offset) {
