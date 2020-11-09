@@ -1,4 +1,5 @@
 {
   "api": "https://liverpool.instructure.com/api/v1",
-  "course_filter": "202021-(COMP[0-9]+)"
+  "course_filter": "^202021-(COMP[0-9]+)",
+  "prefix": "ca!"
 }

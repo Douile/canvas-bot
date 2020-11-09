@@ -82,14 +82,11 @@ class Canvas {
   async getFilteredCourses() {
     const courses = await this.getCourses();
     const filter = this.courseFilter;
-    let res = [];
+    let res = {};
     for (let course of courses) {
-      const match = course.name.match(this.courseFilter);
-      if (match !== null) {
-        res.push({
-          id: course.id,
-          name: match[1]
-        });
+      const match = Array.from(course.name.matchAll(this.courseFilter));
+      if (match.length > 0) {
+        res[course.id] = match[0][1];
       }
     }
     return res;
@@ -113,7 +110,7 @@ class Canvas {
     const discussions = await req.getPaginated(`${this.api}/courses/${courseID}/discussion_topics`, this.token);
     return discussions.filter(d => d.lock_at !== null).map(d => {
       let due = Date.parse(d.lock_at);
-      dueDate = new Date();
+      let dueDate = new Date();
       dueDate.setTime(due);
       return {id: d.id, name: d.title, course: courseID, desc: d.message, due, dueDate, points: 0, url: d.html_url };
     })

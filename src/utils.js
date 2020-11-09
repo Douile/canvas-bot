@@ -12,3 +12,9 @@ exports.getWeekTimes = function(offset) {
   end = start + (MS_WEEK);
   return { start, end };
 }
+
+exports.asyncWrap = function(asyncFunction) {
+  return function() {
+    asyncFunction.apply(this, arguments).then(null, console.error);
+  }
+}
