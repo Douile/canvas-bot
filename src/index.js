@@ -1,10 +1,15 @@
 'use strict';
 
+const { performance } = require('perf_hooks');
 const { Client } = require('discord.js-light');
 const sqlite3 = require('sqlite3');
 const Canvas = require('./canvas.js');
 const { getWeekTimes, asyncWrap } = require('./utils.js');
 const { BOT_PERMISSIONS, BOT_PRESENCE, DB_NAME } = require('./constants.js');
+
+const UPDATE_TIME = 15 * 60 * 1000;
+let LAST_UPDATE;
+let CACHE;
 
 const client = new Client({
   cacheGuilds: false,
@@ -27,19 +32,20 @@ client.on('message', asyncWrap(async function(message) {
   const parts = message.content.substring(client.config.prefix.length).trim().split(' ');
   const command = parts.splice(0, 1)[0];
 
+  let offset;
   switch(command) {
-    case 'thisweek': {
-      const embed = await generateAssignmentsEmbed();
-      await message.channel.send({ embed });
-      break;
-    }
-    case 'nextweek': {
-      const embed = await generateAssignmentsEmbed(1);
-      await message.channel.send({ embed });
-      break;
-    }
+    case 'nextweek':
+    offset = 1;
+    case 'thisweek':
+    const embed = await generateAssignmentsEmbed();
+    await message.channel.send({ embed });
+    break;
   }
 }));
+
+client.on('close', function() {
+  client.db.close();
+})
 
 function awaitOpen(database) {
   return new Promise((resolve, reject) => {
@@ -59,10 +65,19 @@ async function getCoursesAndAssignments() {
   return { courses, assignments };
 }
 
+async function getCoursesAndAssignmentsCached() {
+  const now = performance.now();
+  if (isNaN(LAST_UPDATE) || CACHE === undefined || now - LAST_UPDATE >= UPDATE_TIME) {
+    CACHE = await getCoursesAndAssignments();
+    LAST_UPDATE = now;
+  }
+  return CACHE;
+}
+
 async function getWeeksAssignments(offset) {
   const weekTimes = getWeekTimes(offset);
-  const { courses, assignments } = await getCoursesAndAssignments();
-  return { courses, assignments: assignments.filter(a => a.due >= weekTimes.start && a.due <= weekTimes.end ), weekTimes };
+  const { courses, assignments } = await getCoursesAndAssignmentsCached();
+  return { courses, assignments: assignments.filter(a => a.due >= weekTimes.start && a.due <= weekTimes.end ).sort((a,b) => a.due - b.due), weekTimes };
 }
 
 async function generateAssignmentsEmbed(offset) {
@@ -74,7 +89,7 @@ async function generateAssignmentsEmbed(offset) {
     color: 0xff0000,
     footer: { text: 'Week starting' },
     timestamp: startDate.toISOString(),
-    fields: assignments.sort((a,b) => a.due - b.due).map(a => {
+    fields: assignments.map(a => {
       return {
         name: courses[a.course],
         value: `[${a.name}](${a.url})\nDue: ${a.dueDate.toUTCString()}\nPoints: ${a.points}`,
