@@ -1,14 +1,24 @@
 {
   "name": "canvas-bot",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "init-db": "node ./scripts/initialize-database.js",
+    "init-config": "cp -i ./.config.example.json ./.config.json"
   },
   "keywords": [],
   "author": "Tom",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Douile/canvas-bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Douile/canvas-bot/issues"
+  },
+  "homepage": "https://github.com/Douile/canvas-bot",
   "dependencies": {
     "discord.js-light": "^3.3.5",
     "node-fetch": "^2.6.1",
